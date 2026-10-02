@@ -10,6 +10,7 @@ PRODUCTS = [
     ("五大唱片商品 439", "https://www.5music.com.tw/CDList-C.asp?cdno=439"),
     ("五大唱片商品 438475678968", "https://www.5music.com.tw/CDList-C.asp?cdno=438475678968"),
     ("五大唱片商品 438475678969", "https://www.5music.com.tw/CDList-C.asp?cdno=438475678969"),
+    ("博客来商品 0020204179", "https://www.books.com.tw/products/0020204179?sloc=main"),
 ]
 
 STATE_FILE = Path("state.json")
@@ -20,28 +21,63 @@ def get_page(url):
     r = requests.get(
         url,
         timeout=TIMEOUT,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; FiveMusicStockMonitor/1.0)"},
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 Chrome/140 Safari/537.36"
+            )
+        },
     )
     r.raise_for_status()
     r.encoding = r.apparent_encoding or r.encoding
     return r.text
 
 
-def parse_status(html):
+def parse_status(html, url):
     text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
 
-    if "目前無現貨" in text or "目前无现货" in text:
-        return "out_of_stock"
+    # 五大唱片：明确显示无现货
+    if "5music.com.tw" in url:
+        if "目前無現貨" in text or "目前无现货" in text:
+            return "out_of_stock"
+        return "possibly_in_stock"
+
+    # 博客来：目前商品显示「已售完，補貨中」
+    if "books.com.tw" in url:
+        if "已售完" in text or "補貨中" in text or "补货中" in text:
+            return "out_of_stock"
+
+        # 页面出现购买按钮/加入购物车相关文字时，
+        # 视为可能有库存
+        buy_words = [
+            "加入購物車",
+            "加入购物车",
+            "立即購買",
+            "立即购买",
+            "直接購買",
+            "直接购买",
+        ]
+
+        if any(word in text for word in buy_words):
+            return "possibly_in_stock"
+
+        return "possibly_in_stock"
 
     return "possibly_in_stock"
 
 
 def get_title(html, fallback):
     soup = BeautifulSoup(html, "html.parser")
-    h2 = soup.find("h2")
 
+    h2 = soup.find("h2")
     if h2:
         title = h2.get_text(" ", strip=True)
+        if title:
+            return title
+
+    title_tag = soup.find("title")
+    if title_tag:
+        title = title_tag.get_text(" ", strip=True)
         if title:
             return title
 
@@ -81,7 +117,7 @@ def bark_push(title, body, url):
         endpoint,
         params={
             "url": url,
-            "group": "五大唱片",
+            "group": "五大唱片/博客来",
         },
         timeout=TIMEOUT,
     )
@@ -89,20 +125,19 @@ def bark_push(title, body, url):
     r.raise_for_status()
 
     print(f"[BARK] HTTP {r.status_code}")
-    print("[BARK] Test notification sent successfully.")
 
 
 def main():
 
-    # 手动测试 Bark
+    # 手动 Bark 测试
     test_bark = os.environ.get("TEST_BARK", "").lower() == "true"
 
     if test_bark:
         print("[TEST] Sending Bark test notification...")
 
         bark_push(
-            "🔔 五大唱片监控测试",
-            "GitHub Actions → Bark 测试成功！五大唱片补货监控已经连接。",
+            "🔔 五大唱片/博客来监控测试",
+            "GitHub Actions → Bark 测试成功！监控连接正常。",
             "https://www.5music.com.tw/",
         )
 
@@ -116,7 +151,7 @@ def main():
 
         try:
             html = get_page(url)
-            status = parse_status(html)
+            status = parse_status(html, url)
             title = get_title(html, label)
 
         except Exception as e:
@@ -138,11 +173,11 @@ def main():
 
         print(f"[CHECK] {title}: {previous} -> {status}")
 
-        # 第一次检测只建立基准，不发送通知
+        # 第一次检测只建立基准
         if previous is None:
             continue
 
-        # 只有「无现货 → 可能有现货」才发送通知
+        # 无货 → 可能有货
         if previous == "out_of_stock" and status == "possibly_in_stock":
             notifications.append((title, url))
 
@@ -151,13 +186,15 @@ def main():
     for title, url in notifications:
 
         bark_push(
-            "🔔 五大唱片补货",
-            f"{title}\n检测到商品状态从「无现货」变为「可能有现货」，请立即打开查看。",
+            "🔔 补货提醒",
+            f"{title}\n检测到商品从「无货」变为「可能有货」，请立即打开查看。",
             url,
         )
 
     if notifications:
-        print(f"[ALERT] Sent {len(notifications)} Bark notification(s).")
+        print(
+            f"[ALERT] Sent {len(notifications)} Bark notification(s)."
+        )
 
 
 if __name__ == "__main__":
