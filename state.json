@@ -1,1 +1,17 @@
-{}
+{
+  "五大唱片商品 439": {
+    "status": "possibly_in_stock",
+    "url": "https://www.5music.com.tw/CDList-C.asp?cdno=439",
+    "title": "主選單"
+  },
+  "五大唱片商品 438475678968": {
+    "status": "out_of_stock",
+    "url": "https://www.5music.com.tw/CDList-C.asp?cdno=438475678968",
+    "title": "主選單"
+  },
+  "五大唱片商品 438475678969": {
+    "status": "out_of_stock",
+    "url": "https://www.5music.com.tw/CDList-C.asp?cdno=438475678969",
+    "title": "主選單"
+  }
+}
