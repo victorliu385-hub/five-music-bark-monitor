@@ -13,8 +13,8 @@ PRODUCTS = [
     # 五大唱片
     # =========================
     (
-        "五大唱片商品 439",
-        "https://www.5music.com.tw/CDList-C.asp?cdno=439",
+        "五大唱片商品 439405678604",
+        "https://www.5music.com.tw/CDList-C.asp?cdno=439405678604",
     ),
     (
         "五大唱片商品 438475678968",
@@ -219,11 +219,9 @@ def parse_books_status(text):
 
 
 def parse_rockmall_status(text):
-    # Rockmall 无货
     if "售完" in text:
         return "out_of_stock"
 
-    # Rockmall 有货
     if (
         "加入購物車" in text
         or "加入购物车" in text
