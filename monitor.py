@@ -9,6 +9,9 @@ from playwright.sync_api import sync_playwright
 
 
 PRODUCTS = [
+    # =========================
+    # 五大唱片
+    # =========================
     (
         "五大唱片商品 439",
         "https://www.5music.com.tw/CDList-C.asp?cdno=439",
@@ -21,24 +24,28 @@ PRODUCTS = [
         "五大唱片商品 438475678969",
         "https://www.5music.com.tw/CDList-C.asp?cdno=438475678969",
     ),
+
+    # =========================
+    # 博客来
+    # =========================
     (
         "博客来商品 0020204179",
         "https://www.books.com.tw/products/0020204179",
     ),
 
     # =========================
-    # ROCKMALL 滾石購物網
+    # 滚石購物網 Rockmall
     # =========================
     (
-        "Rockmall 張惠妹 / 偏執面〔神經白膠唱片〕",
+        "滚石｜張惠妹 / 偏執面〔神經白膠唱片〕",
         "https://shop.rockmall.com.tw/product_view.php?id=100083",
     ),
     (
-        "Rockmall 張惠妹 / 偷故事的人〔黑膠〕",
+        "滚石｜張惠妹 / 偷故事的人〔黑膠〕",
         "https://shop.rockmall.com.tw/product_view.php?id=100084",
     ),
     (
-        "Rockmall 阿密特 / 阿密特 意識專輯〔典藏彩膠.嗆辣紅〕",
+        "滚石｜阿密特|張惠妹 ／阿密特 意識專輯 [典藏彩膠.嗆辣紅]",
         "https://shop.rockmall.com.tw/product_view.php?id=81658",
     ),
 ]
@@ -108,7 +115,6 @@ def get_books_page(url):
             page.wait_for_timeout(3000)
 
             text = page.locator("body").inner_text()
-
             title = page.title()
 
             print(f"[BOOKS] Page title: {title}")
@@ -213,19 +219,11 @@ def parse_books_status(text):
 
 
 def parse_rockmall_status(text):
-    """
-    ROCKMALL 商品頁：
-    
-    無貨：
-        售完
-
-    有貨：
-        加入購物車
-    """
-
+    # Rockmall 无货
     if "售完" in text:
         return "out_of_stock"
 
+    # Rockmall 有货
     if (
         "加入購物車" in text
         or "加入购物车" in text
@@ -302,10 +300,33 @@ def bark_push(title, body, url):
             "BARK_KEY secret is not configured."
         )
 
+    # =========================
+    # 根据网站区分 Bark
+    # =========================
+    if "5music.com.tw" in url:
+
+        bark_title = "🎵 五大唱片｜补货提醒"
+        bark_group = "五大唱片"
+
+    elif "rockmall.com.tw" in url:
+
+        bark_title = "🎸 滚石購物網｜补货提醒"
+        bark_group = "滚石"
+
+    elif "books.com.tw" in url:
+
+        bark_title = "📚 博客来｜补货提醒"
+        bark_group = "博客来"
+
+    else:
+
+        bark_title = title
+        bark_group = "音乐商品监控"
+
     endpoint = (
         f"https://api.day.app/"
         f"{quote(key, safe='')}/"
-        f"{quote(title, safe='')}/"
+        f"{quote(bark_title, safe='')}/"
         f"{quote(body, safe='')}"
     )
 
@@ -313,7 +334,7 @@ def bark_push(title, body, url):
         endpoint,
         params={
             "url": url,
-            "group": "五大唱片/博客来/Rockmall",
+            "group": bark_group,
         },
         timeout=TIMEOUT,
     )
@@ -321,11 +342,12 @@ def bark_push(title, body, url):
     r.raise_for_status()
 
     print(
-        f"[BARK] HTTP {r.status_code}"
+        f"[BARK] {bark_group} HTTP {r.status_code}"
     )
 
 
 def main():
+
     test_bark = (
         os.environ.get(
             "TEST_BARK",
@@ -338,14 +360,23 @@ def main():
     # Bark 测试
     # =========================
     if test_bark:
+
         print(
             "[TEST] Sending Bark test notification..."
         )
 
+        # 五大唱片测试
         bark_push(
-            "🔔 音樂商品監控測試",
-            "GitHub Actions → Bark 測試成功！監控連接正常。",
+            "",
+            "GitHub Actions → 五大唱片 Bark 测试成功！",
             "https://www.5music.com.tw/",
+        )
+
+        # 滚石测试
+        bark_push(
+            "",
+            "GitHub Actions → 滚石購物網 Bark 测试成功！",
+            "https://shop.rockmall.com.tw/product_view.php?id=100083",
         )
 
         return
@@ -377,7 +408,7 @@ def main():
                 )
 
             # =========================
-            # 博客來
+            # 博客来
             # =========================
             elif "books.com.tw" in url:
 
@@ -397,7 +428,7 @@ def main():
                     )
 
             # =========================
-            # ROCKMALL
+            # 滚石 Rockmall
             # =========================
             elif "rockmall.com.tw" in url:
 
@@ -445,7 +476,7 @@ def main():
         )
 
         # =========================
-        # 无法确定状态
+        # 无法确定库存
         # =========================
         if status == "unknown":
 
@@ -460,8 +491,10 @@ def main():
             "title": title,
         }
 
+        # =========================
         # 第一次建立状态
         # 不发送通知
+        # =========================
         if previous is None:
             continue
 
@@ -480,16 +513,16 @@ def main():
     save_state(new)
 
     # =========================
-    # Bark 通知
+    # 发送 Bark
     # =========================
     for title, url in notifications:
 
         bark_push(
-            "🔔 補貨提醒",
+            "",
             (
                 f"{title}\n"
-                "檢測到商品從「無貨」變為"
-                "「可能有貨」，請立即打開查看。"
+                "检测到商品从「无货」变为「可能有货」\n"
+                "请立即打开查看。"
             ),
             url,
         )
