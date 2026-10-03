@@ -27,6 +27,7 @@ PRODUCTS = [
 
     # =========================
     # 博客来
+    # 暂时保留，不调整 Cloudflare
     # =========================
     (
         "博客来商品 0020204179",
@@ -299,18 +300,24 @@ def bark_push(title, body, url):
         )
 
     # =========================
-    # 根据网站区分 Bark
+    # 五大唱片
     # =========================
     if "5music.com.tw" in url:
 
         bark_title = "🎵 五大唱片｜补货提醒"
         bark_group = "五大唱片"
 
+    # =========================
+    # 滚石購物網
+    # =========================
     elif "rockmall.com.tw" in url:
 
         bark_title = "🎸 滚石購物網｜补货提醒"
         bark_group = "滚石"
 
+    # =========================
+    # 博客来
+    # =========================
     elif "books.com.tw" in url:
 
         bark_title = "📚 博客来｜补货提醒"
@@ -355,26 +362,63 @@ def main():
     )
 
     # =========================
-    # Bark 测试
+    # Bark 测试模式
     # =========================
     if test_bark:
 
         print(
-            "[TEST] Sending Bark test notification..."
+            "[TEST] Sending Bark test notifications..."
         )
 
+        # =========================
         # 五大唱片测试
+        # 三个商品各发送一条
+        # 点击后直接打开对应专辑
+        # =========================
+
+        five_music_test = [
+            (
+                "五大唱片测试 439405678604",
+                "https://www.5music.com.tw/CDList-C.asp?cdno=439405678604",
+            ),
+            (
+                "五大唱片测试 438475678968",
+                "https://www.5music.com.tw/CDList-C.asp?cdno=438475678968",
+            ),
+            (
+                "五大唱片测试 438475678969",
+                "https://www.5music.com.tw/CDList-C.asp?cdno=438475678969",
+            ),
+        ]
+
+        for test_name, test_url in five_music_test:
+
+            bark_push(
+                "",
+                (
+                    f"{test_name}\n"
+                    "GitHub Actions → 五大唱片 Bark 测试成功！\n"
+                    "点击通知可直接打开对应专辑页面。"
+                ),
+                test_url,
+            )
+
+        # =========================
+        # 滚石测试
+        # =========================
+
         bark_push(
             "",
-            "GitHub Actions → 五大唱片 Bark 测试成功！",
-            "https://www.5music.com.tw/",
+            (
+                "滚石購物網测试\n"
+                "GitHub Actions → 滚石購物網 Bark 测试成功！\n"
+                "点击通知可直接打开对应商品页面。"
+            ),
+            "https://shop.rockmall.com.tw/product_view.php?id=100083",
         )
 
-        # 滚石测试
-        bark_push(
-            "",
-            "GitHub Actions → 滚石購物網 Bark 测试成功！",
-            "https://shop.rockmall.com.tw/product_view.php?id=100083",
+        print(
+            "[TEST] Bark test notifications sent."
         )
 
         return
@@ -511,7 +555,7 @@ def main():
     save_state(new)
 
     # =========================
-    # 发送 Bark
+    # 发送补货 Bark
     # =========================
     for title, url in notifications:
 
