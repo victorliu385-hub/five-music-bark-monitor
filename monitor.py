@@ -46,12 +46,8 @@ PRODUCTS = [
         "https://shop.rockmall.com.tw/product_view.php?id=100084",
     ),
     (
-        "滚石商品 100082",
+        "滚石｜張惠妹 / 阿密特2〔視覺黑膠唱片〕",
         "https://shop.rockmall.com.tw/product_view.php?id=100082",
-    ),
-    (
-        "滚石｜阿密特|張惠妹 ／阿密特 意識專輯 [典藏彩膠.嗆辣紅]",
-        "https://shop.rockmall.com.tw/product_view.php?id=81658",
     ),
 ]
 
@@ -292,19 +288,15 @@ def main():
                 test_url,
             )
 
-        # 滾石測試：測試既有商品與新增的 100082 商品網址
         rockmall_test = [
-            ("滚石購物網测试 100084", "https://shop.rockmall.com.tw/product_view.php?id=100084"),
-            ("滚石購物網测试 100082", "https://shop.rockmall.com.tw/product_view.php?id=100082"),
+            ("滚石测试｜張惠妹 / 偏執面〔神經白膠唱片〕", "https://shop.rockmall.com.tw/product_view.php?id=100083"),
+            ("滚石测试｜張惠妹 / 偷故事的人〔黑膠〕", "https://shop.rockmall.com.tw/product_view.php?id=100084"),
+            ("滚石测试｜張惠妹 / 阿密特2〔視覺黑膠唱片〕", "https://shop.rockmall.com.tw/product_view.php?id=100082"),
         ]
         for test_name, test_url in rockmall_test:
             bark_push(
                 "",
-                (
-                    f"{test_name}\n"
-                    "GitHub Actions → 滚石購物網 Bark 测试成功！\n"
-                    "点击通知可直接打开对应商品页面。"
-                ),
+                f"{test_name}\nGitHub Actions → 滚石購物網 Bark 测试成功！\n点击通知可直接打开对应商品页面。",
                 test_url,
             )
 
