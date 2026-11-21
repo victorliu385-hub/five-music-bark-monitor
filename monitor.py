@@ -46,6 +46,10 @@ PRODUCTS = [
         "https://shop.rockmall.com.tw/product_view.php?id=100084",
     ),
     (
+        "滚石商品 100082",
+        "https://shop.rockmall.com.tw/product_view.php?id=100082",
+    ),
+    (
         "滚石｜阿密特|張惠妹 ／阿密特 意識專輯 [典藏彩膠.嗆辣紅]",
         "https://shop.rockmall.com.tw/product_view.php?id=81658",
     ),
@@ -288,16 +292,21 @@ def main():
                 test_url,
             )
 
-        # 滾石測試改為目前確認的 100084 商品網址
-        bark_push(
-            "",
-            (
-                "滚石購物網测试\n"
-                "GitHub Actions → 滚石購物網 Bark 测试成功！\n"
-                "点击通知可直接打开对应商品页面。"
-            ),
-            "https://shop.rockmall.com.tw/product_view.php?id=100084",
-        )
+        # 滾石測試：測試既有商品與新增的 100082 商品網址
+        rockmall_test = [
+            ("滚石購物網测试 100084", "https://shop.rockmall.com.tw/product_view.php?id=100084"),
+            ("滚石購物網测试 100082", "https://shop.rockmall.com.tw/product_view.php?id=100082"),
+        ]
+        for test_name, test_url in rockmall_test:
+            bark_push(
+                "",
+                (
+                    f"{test_name}\n"
+                    "GitHub Actions → 滚石購物網 Bark 测试成功！\n"
+                    "点击通知可直接打开对应商品页面。"
+                ),
+                test_url,
+            )
 
         print("[TEST] Bark test notifications sent.")
         return
