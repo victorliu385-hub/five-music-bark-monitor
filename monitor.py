@@ -68,16 +68,13 @@ def get_page_requests(url):
             )
         },
     )
-
     r.raise_for_status()
     r.encoding = r.apparent_encoding or r.encoding
-
     return r.text
 
 
 def get_books_page(url):
     print("[BOOKS] Starting Chromium...")
-
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
@@ -87,12 +84,8 @@ def get_books_page(url):
                 "--disable-dev-shm-usage",
             ],
         )
-
         context = browser.new_context(
-            viewport={
-                "width": 1440,
-                "height": 900,
-            },
+            viewport={"width": 1440, "height": 900},
             locale="zh-TW",
             user_agent=(
                 "Mozilla/5.0 (X11; Linux x86_64) "
@@ -100,36 +93,27 @@ def get_books_page(url):
                 "Chrome/140.0.0.0 Safari/537.36"
             ),
         )
-
         page = context.new_page()
-
         try:
             response = page.goto(
                 url,
                 wait_until="domcontentloaded",
                 timeout=TIMEOUT * 1000,
             )
-
             if response:
                 print(f"[BOOKS] HTTP {response.status}")
-
             page.wait_for_timeout(3000)
-
             text = page.locator("body").inner_text()
             title = page.title()
-
             print(f"[BOOKS] Page title: {title}")
             print(f"[BOOKS] Text length: {len(text)}")
-
             return text, title
-
         finally:
             browser.close()
 
 
 def get_rockmall_page(url):
     print("[ROCKMALL] Starting Chromium...")
-
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
@@ -139,12 +123,8 @@ def get_rockmall_page(url):
                 "--disable-dev-shm-usage",
             ],
         )
-
         context = browser.new_context(
-            viewport={
-                "width": 1440,
-                "height": 900,
-            },
+            viewport={"width": 1440, "height": 900},
             locale="zh-TW",
             user_agent=(
                 "Mozilla/5.0 (X11; Linux x86_64) "
@@ -152,55 +132,33 @@ def get_rockmall_page(url):
                 "Chrome/140.0.0.0 Safari/537.36"
             ),
         )
-
         page = context.new_page()
-
         try:
             response = page.goto(
                 url,
                 wait_until="domcontentloaded",
                 timeout=TIMEOUT * 1000,
             )
-
             if response:
-                print(
-                    f"[ROCKMALL] HTTP {response.status}"
-                )
-
+                print(f"[ROCKMALL] HTTP {response.status}")
             page.wait_for_timeout(2000)
-
             text = page.locator("body").inner_text()
             title = page.title()
-
-            print(
-                f"[ROCKMALL] Page title: {title}"
-            )
-
+            print(f"[ROCKMALL] Page title: {title}")
             return text, title
-
         finally:
             browser.close()
 
 
 def parse_5music_status(html):
-    text = BeautifulSoup(
-        html,
-        "html.parser",
-    ).get_text(" ", strip=True)
-
+    text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
     if "目前無現貨" in text or "目前无现货" in text:
         return "out_of_stock"
-
     return "possibly_in_stock"
 
 
 def parse_books_status(text):
-    out_words = [
-        "已售完",
-        "補貨中",
-        "补货中",
-    ]
-
+    out_words = ["已售完", "補貨中", "补货中"]
     if any(word in text for word in out_words):
         return "out_of_stock"
 
@@ -212,119 +170,72 @@ def parse_books_status(text):
         "直接購買",
         "直接购买",
     ]
-
     if any(word in text for word in buy_words):
         return "possibly_in_stock"
-
     return "unknown"
 
 
 def parse_rockmall_status(text):
-    if "售完" in text:
+    # 缺貨/售完優先判斷，避免頁面同時殘留購物車字樣時誤判
+    out_words = ["售完", "缺貨", "缺货", "暫無庫存", "暂无库存"]
+    if any(word in text for word in out_words):
         return "out_of_stock"
 
-    if (
-        "加入購物車" in text
-        or "加入购物车" in text
-    ):
-        return "possibly_in_stock"
+    # 滾石頁面出現「加入購物車」即視為可下單
+    cart_words = ["加入購物車", "加入购物车"]
+    if any(word in text for word in cart_words):
+        return "in_stock"
 
     return "unknown"
 
 
 def get_title_from_html(html, fallback):
-    soup = BeautifulSoup(
-        html,
-        "html.parser",
-    )
-
+    soup = BeautifulSoup(html, "html.parser")
     h2 = soup.find("h2")
-
     if h2:
-        title = h2.get_text(
-            " ",
-            strip=True,
-        )
-
+        title = h2.get_text(" ", strip=True)
         if title:
             return title
 
     title_tag = soup.find("title")
-
     if title_tag:
-        title = title_tag.get_text(
-            " ",
-            strip=True,
-        )
-
+        title = title_tag.get_text(" ", strip=True)
         if title:
             return title
-
     return fallback
 
 
 def load_state():
     if STATE_FILE.exists():
         try:
-            return json.loads(
-                STATE_FILE.read_text(
-                    encoding="utf-8"
-                )
-            )
+            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
         except Exception:
             pass
-
     return {}
 
 
 def save_state(state):
     STATE_FILE.write_text(
-        json.dumps(
-            state,
-            ensure_ascii=False,
-            indent=2,
-        ),
+        json.dumps(state, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
 
 def bark_push(title, body, url):
-    key = os.environ.get(
-        "BARK_KEY",
-        "",
-    ).strip()
-
+    key = os.environ.get("BARK_KEY", "").strip()
     if not key:
-        raise RuntimeError(
-            "BARK_KEY secret is not configured."
-        )
+        raise RuntimeError("BARK_KEY secret is not configured.")
 
-    # =========================
-    # 五大唱片
-    # =========================
     if "5music.com.tw" in url:
-
         bark_title = "🎵 五大唱片｜补货提醒"
         bark_group = "五大唱片"
-
-    # =========================
-    # 滚石購物網
-    # =========================
     elif "rockmall.com.tw" in url:
-
         bark_title = "🎸 滚石購物網｜补货提醒"
         bark_group = "滚石"
-
-    # =========================
-    # 博客来
-    # =========================
     elif "books.com.tw" in url:
-
         bark_title = "📚 博客来｜补货提醒"
         bark_group = "博客来"
-
     else:
-
         bark_title = title
         bark_group = "音乐商品监控"
 
@@ -334,47 +245,23 @@ def bark_push(title, body, url):
         f"{quote(bark_title, safe='')}/"
         f"{quote(body, safe='')}"
     )
-
     r = requests.get(
         endpoint,
-        params={
-            "url": url,
-            "group": bark_group,
-        },
+        params={"url": url, "group": bark_group},
         timeout=TIMEOUT,
     )
-
     r.raise_for_status()
-
-    print(
-        f"[BARK] {bark_group} HTTP {r.status_code}"
-    )
+    print(f"[BARK] {bark_group} HTTP {r.status_code}")
 
 
 def main():
-
     test_bark = (
-        os.environ.get(
-            "TEST_BARK",
-            "",
-        ).lower()
-        == "true"
+        os.environ.get("TEST_BARK", "").lower() == "true"
     )
 
-    # =========================
     # Bark 测试模式
-    # =========================
     if test_bark:
-
-        print(
-            "[TEST] Sending Bark test notifications..."
-        )
-
-        # =========================
-        # 五大唱片测试
-        # 三个商品各发送一条
-        # 点击后直接打开对应专辑
-        # =========================
+        print("[TEST] Sending Bark test notifications...")
 
         five_music_test = [
             (
@@ -390,9 +277,7 @@ def main():
                 "https://www.5music.com.tw/CDList-C.asp?cdno=438475678969",
             ),
         ]
-
         for test_name, test_url in five_music_test:
-
             bark_push(
                 "",
                 (
@@ -403,10 +288,7 @@ def main():
                 test_url,
             )
 
-        # =========================
-        # 滚石测试
-        # =========================
-
+        # 滾石測試改為目前確認的 100084 商品網址
         bark_push(
             "",
             (
@@ -414,117 +296,53 @@ def main():
                 "GitHub Actions → 滚石購物網 Bark 测试成功！\n"
                 "点击通知可直接打开对应商品页面。"
             ),
-            "https://shop.rockmall.com.tw/product_view.php?id=100083",
+            "https://shop.rockmall.com.tw/product_view.php?id=100084",
         )
 
-        print(
-            "[TEST] Bark test notifications sent."
-        )
-
+        print("[TEST] Bark test notifications sent.")
         return
 
     old = load_state()
-
     new = {}
-
     notifications = []
 
     for label, url in PRODUCTS:
-
         try:
-
-            # =========================
-            # 五大唱片
-            # =========================
             if "5music.com.tw" in url:
-
                 html = get_page_requests(url)
+                status = parse_5music_status(html)
+                title = get_title_from_html(html, label)
 
-                status = parse_5music_status(
-                    html
-                )
-
-                title = get_title_from_html(
-                    html,
-                    label,
-                )
-
-            # =========================
-            # 博客来
-            # =========================
             elif "books.com.tw" in url:
-
-                text, page_title = get_books_page(
-                    url
-                )
-
-                status = parse_books_status(
-                    text
-                )
-
+                text, page_title = get_books_page(url)
+                status = parse_books_status(text)
                 title = label
-
                 if page_title:
-                    print(
-                        f"[BOOKS] {page_title}"
-                    )
+                    print(f"[BOOKS] {page_title}")
 
-            # =========================
-            # 滚石 Rockmall
-            # =========================
             elif "rockmall.com.tw" in url:
-
-                text, page_title = get_rockmall_page(
-                    url
-                )
-
-                status = parse_rockmall_status(
-                    text
-                )
-
+                text, page_title = get_rockmall_page(url)
+                status = parse_rockmall_status(text)
                 title = label
-
                 if page_title:
-                    print(
-                        f"[ROCKMALL] {page_title}"
-                    )
+                    print(f"[ROCKMALL] {page_title}")
 
             else:
-
                 status = "unknown"
                 title = label
 
         except Exception as e:
-
-            print(
-                f"[ERROR] {label}: {e}"
-            )
-
-            # 出错时保留之前状态
+            print(f"[ERROR] {label}: {e}")
             if label in old:
                 new[label] = old[label]
-
             continue
 
-        previous = (
-            old
-            .get(label, {})
-            .get("status")
-        )
+        previous = old.get(label, {}).get("status")
+        print(f"[CHECK] {title}: {previous} -> {status}")
 
-        print(
-            f"[CHECK] {title}: "
-            f"{previous} -> {status}"
-        )
-
-        # =========================
-        # 无法确定库存
-        # =========================
         if status == "unknown":
-
             if label in old:
                 new[label] = old[label]
-
             continue
 
         new[label] = {
@@ -533,55 +351,36 @@ def main():
             "title": title,
         }
 
-        # =========================
-        # 第一次建立状态
-        # 不发送通知
-        # =========================
+        # 第一次建立狀態不發通知
         if previous is None:
             continue
 
-        # =========================
-        # 无货 -> 有货
-        # =========================
+        # 缺貨 -> 有貨：五大/博客來使用原有 possibly_in_stock；
+        # 滾石加入購物車後回傳 in_stock。
         if (
             previous == "out_of_stock"
-            and status == "possibly_in_stock"
+            and status in ("possibly_in_stock", "in_stock")
         ):
-
-            notifications.append(
-                (title, url)
-            )
+            notifications.append((title, url, status))
 
     save_state(new)
 
-    # =========================
-    # 发送补货 Bark
-    # =========================
-    for title, url in notifications:
+    for title, url, status in notifications:
+        if status == "in_stock":
+            status_text = "已出现「加入购物车」，现在可以下单！"
+        else:
+            status_text = "检测到商品从「无货」变为「可能有货」。"
 
         bark_push(
             "",
-            (
-                f"{title}\n"
-                "检测到商品从「无货」变为「可能有货」\n"
-                "请立即打开查看。"
-            ),
+            f"{title}\n{status_text}\n请立即打开商品页面查看。",
             url,
         )
 
     if notifications:
-
-        print(
-            f"[ALERT] Sent "
-            f"{len(notifications)} "
-            f"Bark notification(s)."
-        )
-
+        print(f"[ALERT] Sent {len(notifications)} Bark notification(s).")
     else:
-
-        print(
-            "[INFO] No stock change detected."
-        )
+        print("[INFO] No stock change detected.")
 
 
 if __name__ == "__main__":
