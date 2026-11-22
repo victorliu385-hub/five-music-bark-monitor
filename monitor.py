@@ -176,15 +176,16 @@ def parse_books_status(text):
 
 
 def parse_rockmall_status(text):
-    # 缺貨/售完優先判斷，避免頁面同時殘留購物車字樣時誤判
-    out_words = ["售完", "缺貨", "缺货", "暫無庫存", "暂无库存"]
-    if any(word in text for word in out_words):
-        return "out_of_stock"
-
-    # 滾石頁面出現「加入購物車」即視為可下單
+    # 按照监控规则：商品出现「加入購物車」即视为可以下单。
+    # 优先检查购物车文字，避免页面其他区域的「售完」字样覆盖商品状态。
     cart_words = ["加入購物車", "加入购物车"]
     if any(word in text for word in cart_words):
         return "in_stock"
+
+    # 页面没有加入购物车文字时，再判断缺货状态。
+    out_words = ["售完", "缺貨", "缺货", "暫無庫存", "暂无库存"]
+    if any(word in text for word in out_words):
+        return "out_of_stock"
 
     return "unknown"
 
